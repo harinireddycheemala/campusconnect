@@ -680,19 +680,29 @@ const VIEWS = {
 async function render() {
   root.innerHTML = `<div class="empty-state">Loading...</div>`;
 
-  const content = await VIEWS[state.view]();
+  try {
+    const content = await VIEWS[state.view]();
 
-  root.innerHTML = content;
+    root.innerHTML = content;
 
-  bindDynamicButtons();
+    bindDynamicButtons();
 
-  window.scrollTo?.(0, 0);
+    window.scrollTo?.(0, 0);
 
-  root.querySelectorAll(".quick-btn").forEach(btn => {
-    btn.addEventListener("click", () => setView(btn.dataset.view));
-  });
+    root.querySelectorAll(".quick-btn").forEach(btn => {
+      btn.addEventListener("click", () => setView(btn.dataset.view));
+    });
+
+  } catch (error) {
+    console.error("Render error:", error);
+
+    root.innerHTML = `
+      <div class="empty-state">
+        Something went wrong while loading this page.
+      </div>
+    `;
+  }
 }
-
 function bindDynamicButtons() {
   root.querySelectorAll(".btn-register").forEach(btn => {
   btn.addEventListener("click", async () => {
@@ -738,10 +748,12 @@ function bindDynamicButtons() {
 
       state.eventState[eventId] = true;
     }
-
     render();
   });
 });
+}
+
+
 
 function setView(view) {
   state.view = view;
