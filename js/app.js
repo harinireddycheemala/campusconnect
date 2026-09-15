@@ -417,33 +417,87 @@ function viewDiscover() {
   `;
 }
 
-// ---------- View: Events ----------
-function viewEvents() {
-  const list = DATA.events.filter(matchesQuery).map(e => {
-    const going = !!state.eventState[e.title];
+async function viewEvents() {
+  const { data: events, error } = await supabase
+    .from("events")
+    .select("*")
+    .order("event_date", { ascending: true });
+
+  if (error) {
+    console.error("Events loading error:", error);
     return `
-    <article class="ticket-card">
-      <div class="ticket-main">
-        <span class="tag tag--${e.category.toLowerCase()}">${e.category}</span>
-        <h3 class="ticket-title">${e.title}</h3>
-        <p class="ticket-org">${e.org}</p>
-        <p class="ticket-when">${e.date} · ${e.time} · ${e.venue}</p>
-      </div>
-      <div class="ticket-stub">
-        <span class="ticket-mode">${e.mode}</span>
-        <span class="ticket-interest">${e.interested}${going ? " +1" : ""} interested</span>
-        <button class="btn-solid btn-register" data-title="${e.title}">${going ? "Registered ✓" : "Register"}</button>
-      </div>
-    </article>`;
+      <section class="view">
+        <div class="view-head">
+          <p class="eyebrow-free">Campus events</p>
+          <h1 class="view-title">What's on this month</h1>
+        </div>
+        ${emptyState("Unable to load events right now.")}
+      </section>
+    `;
+  }
+
+  const filteredEvents = (events || []).filter(matchesQuery);
+
+  const list = filteredEvents.map(e => {
+    const going = !!state.eventState[e.id];
+
+    return `
+      <article class="ticket-card">
+        <div class="ticket-main">
+          <span class="tag tag--${(e.category || "event").toLowerCase()}">
+            ${e.category || "Event"}
+          </span>
+
+          <h3 class="ticket-title">${e.title}</h3>
+
+          <p class="ticket-org">
+            ${e.organization || ""}
+          </p>
+
+          <p class="ticket-when">
+            ${e.event_date || ""} ·
+            ${e.event_time || ""} ·
+            ${e.venue || ""}
+          </p>
+
+          <p>${e.description || ""}</p>
+        </div>
+
+        <div class="ticket-stub">
+          <span class="ticket-mode">
+            Capacity: ${e.capacity || 100}
+          </span>
+
+          <button
+            class="btn-solid btn-register"
+            data-id="${e.id}"
+          >
+            ${going ? "Registered ✓" : "Register"}
+          </button>
+        </div>
+      </article>
+    `;
   }).join("") || emptyState("No events match that search.");
 
   return `
     <section class="view">
+
       <div class="view-head">
         <p class="eyebrow-free">Campus events</p>
-        <h1 class="view-title">What's on this month</h1>
+
+        <h1 class="view-title">
+          What's on this month
+        </h1>
+
+        <p class="view-sub">
+          Discover events happening around campus.
+        </p>
       </div>
-      <div class="grid grid--events">${list}</div>
+
+      <div class="grid grid--events">
+        ${list}
+      </div>
+
     </section>
   `;
 }
@@ -623,46 +677,71 @@ const VIEWS = {
   profile: viewProfile
 };
 
-function render() {
-  root.innerHTML = VIEWS[state.view]();
+async function render() {
+  root.innerHTML = `<div class="empty-state">Loading...</div>`;
+
+  const content = await VIEWS[state.view]();
+
+  root.innerHTML = content;
+
   bindDynamicButtons();
+
   window.scrollTo?.(0, 0);
+
   root.querySelectorAll(".quick-btn").forEach(btn => {
     btn.addEventListener("click", () => setView(btn.dataset.view));
   });
 }
 
 function bindDynamicButtons() {
-  root.querySelectorAll(".btn-connect").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const name = btn.dataset.name;
-      const seq = { "Connect": "Pending", "Pending": "Connected", "Connected": "Connected" };
-      state.connectState[name] = seq[state.connectState[name]];
-      render();
-    });
-  });
   root.querySelectorAll(".btn-register").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const title = btn.dataset.title;
-      state.eventState[title] = !state.eventState[title];
-      render();
-    });
+  btn.addEventListener("click", async () => {
+
+    if (!currentSession?.user) {
+      alert("Please login to register for an event.");
+      openAuthModal();
+      return;
+    }
+
+    const eventId = btn.dataset.id;
+    const userId = currentSession.user.id;
+
+    const alreadyRegistered = state.eventState[eventId];
+
+    if (alreadyRegistered) {
+      const { error } = await supabase
+        .from("event_registrations")
+        .delete()
+        .eq("event_id", eventId)
+        .eq("user_id", userId);
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      state.eventState[eventId] = false;
+
+    } else {
+
+      const { error } = await supabase
+        .from("event_registrations")
+        .insert({
+          event_id: eventId,
+          user_id: userId
+        });
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      state.eventState[eventId] = true;
+    }
+
+    render();
   });
-  root.querySelectorAll(".btn-join").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const name = btn.dataset.name;
-      state.joinState[name] = !state.joinState[name];
-      render();
-    });
-  });
-  root.querySelectorAll(".btn-join-community").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const name = btn.dataset.name;
-      state.communityState[name] = "Requested";
-      render();
-    });
-  });
-}
+});
 
 function setView(view) {
   state.view = view;
