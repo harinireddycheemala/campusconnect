@@ -24,7 +24,7 @@ async function loadAuthSession() {
   try {
     const {
       data: { session }
-    } = await supabaseClient.auth.getSession();
+    } = await campusSupabase.auth.getSession();
 
     currentSession = session;
 
@@ -39,7 +39,7 @@ async function loadAuthSession() {
 }
 
 async function loadProfile(user) {
-  const { data, error } = await supabaseClient
+  const { data, error } = await campusSupabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
@@ -66,11 +66,12 @@ async function loadProfile(user) {
 }
 
 async function createProfileIfNeeded(user, name, course, year) {
-  const { data: existing, error: checkError } = await supabaseClient
-    .from("profiles")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { data: existing, error: checkError } =
+    await campusSupabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
 
   if (checkError) {
     console.error("Profile check error:", checkError);
@@ -79,7 +80,7 @@ async function createProfileIfNeeded(user, name, course, year) {
 
   if (existing) return;
 
-  const { error } = await supabaseClient
+  const { error } = await campusSupabase
     .from("profiles")
     .insert({
       id: user.id,
@@ -98,7 +99,7 @@ async function createProfileIfNeeded(user, name, course, year) {
 }
 
 async function registerUser(name, email, password, course, year) {
-  const { data, error } = await supabaseClient.auth.signUp({
+  const { data, error } = await campusSupabase.auth.signUp({
     email,
     password
   });
@@ -134,7 +135,7 @@ async function registerUser(name, email, password, course, year) {
 
 async function loginUser(email, password) {
   const { data, error } =
-    await supabaseClient.auth.signInWithPassword({
+    await campusSupabase.auth.signInWithPassword({
       email,
       password
     });
@@ -160,7 +161,8 @@ async function loginUser(email, password) {
 }
 
 async function logoutUser() {
-  const { error } = await supabaseClient.auth.signOut();
+  const { error } =
+    await campusSupabase.auth.signOut();
 
   if (error) {
     alert(error.message);
@@ -178,7 +180,8 @@ async function logoutUser() {
 }
 
 function updateAuthButton() {
-  let authBtn = document.getElementById("campus-auth-btn");
+  let authBtn =
+    document.getElementById("campus-auth-btn");
 
   if (!authBtn) {
     authBtn = document.createElement("button");
@@ -270,7 +273,9 @@ function openAuthModal() {
       e.preventDefault();
 
       const email =
-        document.getElementById("login-email").value.trim();
+        document
+          .getElementById("login-email")
+          .value.trim();
 
       const password =
         document.getElementById("login-password").value;
@@ -406,7 +411,9 @@ function openRegisterModal() {
           .value.trim();
 
       const password =
-        document.getElementById("register-password").value;
+        document
+          .getElementById("register-password")
+          .value;
 
       const course =
         document
@@ -414,7 +421,9 @@ function openRegisterModal() {
           .value.trim();
 
       const year =
-        document.getElementById("register-year").value;
+        document
+          .getElementById("register-year")
+          .value;
 
       await registerUser(
         name,
@@ -690,7 +699,7 @@ function viewDiscover() {
 
 async function viewEvents() {
   const { data: events, error } =
-    await supabaseClient
+    await campusSupabase
       .from("events")
       .select("*")
       .order("event_date", {
@@ -1432,7 +1441,7 @@ function bindDynamicButtons() {
           if (alreadyRegistered) {
 
             const { error } =
-              await supabaseClient
+              await campusSupabase
                 .from("event_registrations")
                 .delete()
                 .eq(
@@ -1455,7 +1464,7 @@ function bindDynamicButtons() {
           } else {
 
             const { error } =
-              await supabaseClient
+              await campusSupabase
                 .from("event_registrations")
                 .insert({
                   event_id: eventId,
@@ -1544,7 +1553,6 @@ function bindDynamicButtons() {
         }
       );
     });
-  }
 }
 
 // ============================================================
@@ -1826,7 +1834,7 @@ loadAuthSession().then(() => {
   render();
 });
 
-supabaseClient.auth.onAuthStateChange(
+campusSupabase.auth.onAuthStateChange(
   async (event, session) => {
 
     currentSession = session;
