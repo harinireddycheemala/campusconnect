@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CampusConnect — The Digital Layer of Your Campus</title>
+<meta name="description" content="CampusConnect: discover people, events, opportunities and communities on your campus, all in one place." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="rail">
+    <div class="rail-mark">
+      <span class="rail-mark-glyph">CC</span>
+      <span class="rail-mark-name">CampusConnect</span>
+    </div>
+
+    <nav class="rail-nav" id="rail-nav">
+      <button class="rail-link is-active" data-view="home">
+        <span class="rail-num">01</span> Home
+      </button>
+      <button class="rail-link" data-view="discover">
+        <span class="rail-num">02</span> Discover
+      </button>
+      <button class="rail-link" data-view="events">
+        <span class="rail-num">03</span> Events
+      </button>
+      <button class="rail-link" data-view="opportunities">
+        <span class="rail-num">04</span> Opportunities
+      </button>
+      <button class="rail-link" data-view="projects">
+        <span class="rail-num">05</span> Projects
+      </button>
+      <button class="rail-link" data-view="communities">
+        <span class="rail-num">06</span> Communities
+      </button>
+      <button class="rail-link" data-view="profile">
+        <span class="rail-num">07</span> Profile
+      </button>
+    </nav>
+
+    <div class="rail-foot">
+      <div class="rail-user">
+        <div class="rail-avatar">YS</div>
+        <div>
+          <div class="rail-user-name">Yasaswini</div>
+          <div class="rail-user-role">CS · 3rd Year</div>
+        </div>
+      </div>
+      <p class="rail-note">Prototype build — sample data only.</p>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="stage">
+
+    <header class="topbar">
+      <div class="topbar-search">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.25" stroke="currentColor" stroke-width="1.4"/><path d="M11 11L14.5 14.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <input id="global-search" type="text" placeholder="Search people, events, opportunities, projects…" />
+      </div>
+      <button class="btn-create" id="btn-create">+ Create</button>
+    </header>
+
+    <div class="view-scroll" id="view-root">
+      <!-- views injected by app.js -->
+    </div>
+
+  </main>
+</div>
+
+<!-- Modal -->
+<div class="modal-veil" id="modal-veil">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
