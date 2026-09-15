@@ -1,8 +1,6 @@
-const SUPABASE_URL = "https://kwvwrjpsophoczihyzpp.supabase.co";
+// CampusConnect Supabase connection
 
-const SUPABASE_KEY = "sb_publishable_g72UBOMYiTTmXzxvD0wgFQ_4ntGq6gB";
-
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
+window.campusSupabase = window.supabase.createClient(
+  "https://kwvwrjpsophoczihyzpp.supabase.co",
+  "sb_publishable_g72UBOMYiTTmXzxvD0wgFQ_4ntGq6gB"
 );
