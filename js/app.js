@@ -12,7 +12,326 @@ const state = {
   communityState: {}, // community name -> "Join" | "Requested" | "Member"
   query: ""
 };
+// ---------- Supabase Authentication ----------
+let currentSession = null;
+let currentProfile = null;
 
+async function loadAuthSession() {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  currentSession = session;
+
+  if (session?.user) {
+    await loadProfile(session.user);
+  }
+
+  updateAuthButton();
+}
+
+async function loadProfile(user) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Profile loading error:", error);
+    return;
+  }
+
+  currentProfile = data;
+
+  // Update existing demo user data with logged-in user's profile
+  if (data && DATA.currentUser) {
+    DATA.currentUser.name = data.name || user.email.split("@")[0];
+    DATA.currentUser.email = data.email || user.email;
+    DATA.currentUser.dept = data.course || "Student";
+    DATA.currentUser.year = data.year || "";
+    DATA.currentUser.bio = data.bio || "";
+    DATA.currentUser.skills = data.skills || [];
+    DATA.currentUser.interests = data.interests || [];
+  }
+}
+
+async function createProfileIfNeeded(user, name, course, year) {
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existing) return;
+
+  const { error } = await supabase
+    .from("profiles")
+    .insert({
+      id: user.id,
+      name: name,
+      email: user.email,
+      course: course,
+      year: year,
+      bio: "",
+      skills: [],
+      interests: []
+    });
+
+  if (error) {
+    console.error("Profile creation error:", error);
+  }
+}
+
+async function registerUser(name, email, password, course, year) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password
+  });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  if (data.user && data.session) {
+    await createProfileIfNeeded(data.user, name, course, year);
+    await loadAuthSession();
+
+    closeModal();
+    alert("Registration successful!");
+    render();
+  } else {
+    alert(
+      "Registration successful! Please check your email to verify your account, then log in."
+    );
+    closeModal();
+  }
+}
+
+async function loginUser(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  currentSession = data.session;
+
+  if (data.user) {
+    await loadProfile(data.user);
+  }
+
+  closeModal();
+  updateAuthButton();
+  render();
+
+  alert("Login successful!");
+}
+
+async function logoutUser() {
+  await supabase.auth.signOut();
+
+  currentSession = null;
+  currentProfile = null;
+
+  alert("Logged out successfully.");
+  updateAuthButton();
+  render();
+}
+
+function updateAuthButton() {
+  let authBtn = document.getElementById("campus-auth-btn");
+
+  if (!authBtn) {
+    authBtn = document.createElement("button");
+    authBtn.id = "campus-auth-btn";
+    authBtn.className = "btn-outline";
+
+    const createBtn = document.getElementById("btn-create");
+
+    if (createBtn && createBtn.parentElement) {
+      createBtn.parentElement.insertBefore(authBtn, createBtn);
+    } else {
+      document.body.appendChild(authBtn);
+    }
+  }
+
+  if (currentSession?.user) {
+    authBtn.textContent = "Logout";
+    authBtn.onclick = logoutUser;
+  } else {
+    authBtn.textContent = "Login";
+    authBtn.onclick = openAuthModal;
+  }
+}
+
+function openAuthModal() {
+  box.innerHTML = `
+    <div class="modal-head">
+      <h2>Login to CampusConnect</h2>
+      <button class="modal-close" id="modal-close">&times;</button>
+    </div>
+
+    <p class="modal-sub">
+      Connect with students, discover events and build together.
+    </p>
+
+    <form id="login-form">
+
+      <label class="form-label">Email</label>
+      <input
+        id="login-email"
+        type="email"
+        placeholder="your@email.com"
+        required
+      >
+
+      <label class="form-label">Password</label>
+      <input
+        id="login-password"
+        type="password"
+        placeholder="Password"
+        required
+      >
+
+      <button class="btn-solid" type="submit">
+        Login
+      </button>
+
+    </form>
+
+    <p class="auth-switch">
+      Don't have an account?
+      <button class="link-btn" id="show-register">
+        Register
+      </button>
+    </p>
+  `;
+
+  veil.classList.add("is-open");
+
+  document
+    .getElementById("modal-close")
+    .addEventListener("click", closeModal);
+
+  document
+    .getElementById("login-form")
+    .addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById("login-email").value.trim();
+      const password = document.getElementById("login-password").value;
+
+      await loginUser(email, password);
+    });
+
+  document
+    .getElementById("show-register")
+    .addEventListener("click", openRegisterModal);
+}
+
+function openRegisterModal() {
+  box.innerHTML = `
+    <div class="modal-head">
+      <h2>Create your account</h2>
+      <button class="modal-close" id="modal-close">&times;</button>
+    </div>
+
+    <p class="modal-sub">
+      Join your campus community.
+    </p>
+
+    <form id="register-form">
+
+      <label class="form-label">Full Name</label>
+      <input
+        id="register-name"
+        type="text"
+        placeholder="Your full name"
+        required
+      >
+
+      <label class="form-label">Email</label>
+      <input
+        id="register-email"
+        type="email"
+        placeholder="your@email.com"
+        required
+      >
+
+      <label class="form-label">Password</label>
+      <input
+        id="register-password"
+        type="password"
+        placeholder="Minimum 6 characters"
+        minlength="6"
+        required
+      >
+
+      <label class="form-label">Course</label>
+      <input
+        id="register-course"
+        type="text"
+        placeholder="e.g. Computer Science"
+        required
+      >
+
+      <label class="form-label">Year</label>
+      <select id="register-year" required>
+        <option value="">Select year</option>
+        <option value="1st Year">1st Year</option>
+        <option value="2nd Year">2nd Year</option>
+        <option value="3rd Year">3rd Year</option>
+        <option value="4th Year">4th Year</option>
+      </select>
+
+      <button class="btn-solid" type="submit">
+        Create Account
+      </button>
+
+    </form>
+
+    <p class="auth-switch">
+      Already have an account?
+      <button class="link-btn" id="show-login">
+        Login
+      </button>
+    </p>
+  `;
+
+  veil.classList.add("is-open");
+
+  document
+    .getElementById("modal-close")
+    .addEventListener("click", closeModal);
+
+  document
+    .getElementById("register-form")
+    .addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById("register-name").value.trim();
+      const email = document.getElementById("register-email").value.trim();
+      const password = document.getElementById("register-password").value;
+      const course = document.getElementById("register-course").value.trim();
+      const year = document.getElementById("register-year").value;
+
+      await registerUser(
+        name,
+        email,
+        password,
+        course,
+        year
+      );
+    });
+
+  document
+    .getElementById("show-login")
+    .addEventListener("click", openAuthModal);
+}
 DATA.people.forEach(p => state.connectState[p.name] = "Connect");
 DATA.communities.forEach(c => state.communityState[c.name] = c.role ? "Member" : "Join");
 
@@ -414,6 +733,19 @@ document.getElementById("btn-create").addEventListener("click", () => {
 
 veil.addEventListener("click", (e) => { if (e.target === veil) closeModal(); });
 function closeModal() { veil.classList.remove("is-open"); }
-
 // Initial paint
-render();
+loadAuthSession().then(() => {
+  render();
+});
+
+supabase.auth.onAuthStateChange(async (event, session) => {
+  currentSession = session;
+
+  if (session?.user) {
+    await loadProfile(session.user);
+  } else {
+    currentProfile = null;
+  }
+
+  updateAuthButton();
+});
